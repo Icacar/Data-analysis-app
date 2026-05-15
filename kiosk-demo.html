@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafeRide Kiosk — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#060b14;font-family:'Inter',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+h1.demo-title{color:#334155;font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+
+/* Kiosk shell */
+.kiosk{width:480px;max-width:100%;min-height:700px;background:linear-gradient(160deg,#0d1b2e,#0a1628);border:1px solid #1e3a5f;border-radius:20px;box-shadow:0 0 60px rgba(56,189,248,.08),0 0 120px rgba(0,0,0,.6);position:relative;display:flex;flex-direction:column;overflow:hidden}
+.kiosk::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#38bdf8,transparent);opacity:.4}
+.screen{flex:1;display:none;flex-direction:column;animation:slideUp .4s ease-out}
+.screen.active{display:flex}
+.kiosk-footer{display:flex;justify-content:space-between;padding:8px 20px;font-size:11px;color:#334155;border-top:1px solid #1e3a5f}
+
+/* Nav dots */
+.nav{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:#1e3a5f;cursor:pointer;transition:all .2s}
+.nav-dot.active{background:#38bdf8;transform:scale(1.3)}
+.nav-arrows{display:flex;justify-content:center;gap:12px;margin-top:10px}
+.nav-btn{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:#38bdf8;padding:8px 20px;border-radius:12px;cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s}
+.nav-btn:hover{background:rgba(56,189,248,.2)}
+.screen-label{text-align:center;font-size:11px;color:#475569;margin-top:8px;letter-spacing:.15em;text-transform:uppercase}
+
+/* Colors */
+:root{
+  --safe:#10b981; --caution:#f59e0b; --danger:#ef4444;
+  --primary:#38bdf8; --card:#0f1f38; --border:#1e3a5f;
+  --text:#e2e8f0; --muted:#64748b;
+}
+
+/* Animations */
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes breath{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.18);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ping{0%{transform:scale(1);opacity:.8}100%{transform:scale(2);opacity:0}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ─── SCREEN 1: WELCOME ─── */
+#s1{padding:32px 28px;gap:0;justify-content:space-between}
+.s1-header{display:flex;justify-content:space-between;align-items:center}
+.sensor-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981}
+.sensor-dot{width:8px;height:8px;border-radius:50%;background:#10b981;animation:pulse 2s infinite}
+.s1-clock{text-align:right}
+.s1-clock .time{font-size:18px;font-weight:600;color:#cbd5e1}
+.s1-clock .date{font-size:11px;color:#475569}
+.s1-logo{display:flex;flex-direction:column;align-items:center;gap:16px;margin:32px 0}
+.logo-icon{width:112px;height:112px;border-radius:28px;background:linear-gradient(135deg,#0f3460,#0a1628);border:1px solid #1e3a5f;display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:0 0 40px rgba(56,189,248,.15)}
+.logo-title{font-size:40px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+.logo-sub{font-size:12px;color:#475569;letter-spacing:.25em;text-transform:uppercase;margin-top:4px}
+.tagline{color:#475569;font-size:13px;text-align:center}
+.lang-section{width:100%}
+.lang-hint{font-size:11px;color:#475569;letter-spacing:.15em;text-transform:uppercase;text-align:center;margin-bottom:12px}
+.lang-btns{display:flex;gap:12px}
+.lang-btn{flex:1;padding:20px;border-radius:18px;background:linear-gradient(135deg,#0f3460,#0a2040);border:1px solid #1e3a5f;color:#e2e8f0;font-size:18px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .2s;font-family:inherit}
+.lang-btn:hover{border-color:#38bdf8;box-shadow:0 0 20px rgba(56,189,248,.2)}
+.lang-flag{font-size:32px}
+
+/* ─── SCREEN 2: INSTRUCTION ─── */
+#s2{padding:28px;gap:20px}
+.screen-header{display:flex;align-items:center;gap:10px}
+.back-btn{width:36px;height:36px;border-radius:12px;background:transparent;border:none;color:#64748b;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.back-btn:hover{background:rgba(255,255,255,.05);color:#e2e8f0}
+.screen-title{font-size:20px;font-weight:700;color:#e2e8f0}
+.sensor-illus{display:flex;justify-content:center}
+.sensor-circle{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#0f3460,#0a1628);border:2px solid #1e3a5f;display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:0 0 30px rgba(56,189,248,.12)}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:18px;background:rgba(14,31,56,.8);border:1px solid #1e3a5f}
+.step-icon{width:40px;height:40px;border-radius:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.step-title{font-size:13px;font-weight:600;color:#e2e8f0}
+.step-desc{font-size:11px;color:#475569;margin-top:2px}
+.btn-primary{width:100%;padding:18px;border-radius:18px;background:#0ea5e9;border:1px solid rgba(56,189,248,.3);color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:inherit;box-shadow:0 0 20px rgba(14,165,233,.25)}
+.btn-primary:hover{background:#38bdf8}
+.disclaimer{font-size:11px;color:#334155;text-align:center;line-height:1.5}
+
+/* ─── SCREEN 3: TESTING ─── */
+#s3{padding:28px;align-items:center;justify-content:center;gap:28px}
+.test-phase{font-size:12px;color:#64748b;letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+.breath-container{position:relative;display:flex;align-items:center;justify-content:center;width:200px;height:200px}
+.ring1,.ring2{position:absolute;border-radius:50%;animation:ping 2s cubic-bezier(0,0,.2,1) infinite}
+.ring1{width:200px;height:200px;background:rgba(56,189,248,.04)}
+.ring2{width:160px;height:160px;background:rgba(56,189,248,.06);animation-delay:.3s}
+.breath-core{width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.15),rgba(56,189,248,.03) 70%);border:2px solid rgba(56,189,248,.3);display:flex;align-items:center;justify-content:center;font-size:56px;animation:breath 2s ease-in-out infinite;position:relative;z-index:1}
+.countdown-ring{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.countdown-ring svg{transform:rotate(-90deg)}
+.countdown-num{position:absolute;font-size:22px;font-weight:700;color:#38bdf8}
+.progress-wrap{width:280px}
+.progress-bar{height:4px;border-radius:2px;background:#1e3a5f;overflow:hidden;margin-bottom:6px}
+.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#38bdf8,#818cf8);box-shadow:0 0 8px rgba(56,189,248,.6);animation:fillBar 3s linear forwards}
+@keyframes fillBar{from{width:0}to{width:100%}}
+.progress-labels{display:flex;justify-content:space-between;font-size:10px;color:#334155}
+.test-hint{font-size:12px;color:#334155;text-align:center;max-width:240px;line-height:1.6}
+
+/* ─── SCREEN 4a: RESULT SAFE ─── */
+#s4a{padding:28px;gap:16px;align-items:center}
+.result-subtitle{text-align:center}
+.result-subtitle h2{font-size:17px;font-weight:700;color:#e2e8f0}
+.result-subtitle p{font-size:11px;color:#475569;margin-top:2px}
+
+/* Gauge SVG wrapper */
+.gauge-wrap{width:100%;display:flex;justify-content:center}
+.risk-card{width:100%;border-radius:18px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.risk-card.safe{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4)}
+.risk-card.caution{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)}
+.risk-card.danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4)}
+.risk-icon-big{font-size:32px}
+.risk-title{font-size:13px;font-weight:700;letter-spacing:.1em}
+.risk-title.safe{color:#10b981}
+.risk-title.caution{color:#f59e0b}
+.risk-title.danger{color:#ef4444}
+.risk-msg{font-size:11px;color:#64748b;line-height:1.5}
+.risk-advice{font-size:10px;color:#475569;font-style:italic;margin-top:4px}
+.result-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.btn-book{width:100%;padding:18px;border-radius:18px;background:#0ea5e9;border:1px solid rgba(56,189,248,.3);color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;box-shadow:0 0 20px rgba(14,165,233,.25)}
+.btn-row{display:flex;gap:10px}
+.btn-ghost{flex:1;padding:12px;border-radius:16px;background:transparent;border:1px solid transparent;color:#475569;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-ghost:hover{background:rgba(255,255,255,.05);color:#94a3b8}
+.btn-secondary{width:100%;padding:14px;border-radius:16px;background:transparent;border:1px solid #1e3a5f;color:#94a3b8;font-size:14px;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-secondary:hover{border-color:#38bdf8;color:#38bdf8}
+
+/* ─── SCREEN 5: DRIVERS ─── */
+#s5{padding:28px;gap:18px}
+.driver-list{display:flex;flex-direction:column;gap:10px;flex:1}
+.driver-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:18px;background:rgba(14,31,56,.8);border:1px solid #1e3a5f;transition:all .2s}
+.driver-card:hover{border-color:#38bdf8;box-shadow:0 0 16px rgba(56,189,248,.1)}
+.driver-avatar{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#0f3460,#0a2040);border:1px solid #1e3a5f;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#38bdf8;flex-shrink:0}
+.driver-info{flex:1;min-width:0}
+.driver-name{font-size:14px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.driver-stars{display:flex;align-items:center;gap:2px;margin:2px 0}
+.star{font-size:11px;color:#f59e0b}
+.star.off{color:#334155}
+.driver-rating{font-size:11px;color:#64748b;margin-left:4px}
+.driver-meta{font-size:11px;color:#475569}
+.driver-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.eta-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:8px;background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2)}
+.btn-select{padding:8px 14px;border-radius:12px;background:#0ea5e9;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.map-placeholder{padding:14px;border-radius:14px;background:rgba(14,31,56,.6);border:1px solid #1e3a5f;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#334155}
+
+/* ─── SCREEN 6: PACKAGES ─── */
+#s6{padding:28px;gap:16px}
+.pkg-list{display:flex;flex-direction:column;gap:14px;flex:1}
+.pkg-card{position:relative;padding:16px;border-radius:18px;background:rgba(14,31,56,.8);border:1px solid #1e3a5f;display:flex;flex-direction:column;gap:12px;transition:all .2s}
+.pkg-card.highlighted{background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(14,31,56,.9));border-color:rgba(56,189,248,.4);box-shadow:0 0 20px rgba(56,189,248,.1)}
+.rec-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#38bdf8;color:#060b14;font-size:11px;font-weight:700;padding:2px 12px;border-radius:999px;white-space:nowrap}
+.pkg-header{display:flex;justify-content:space-between;align-items:flex-start}
+.pkg-name{font-size:15px;font-weight:700;color:#e2e8f0}
+.pkg-desc{font-size:11px;color:#475569;margin-top:2px}
+.pkg-price{font-size:22px;font-weight:900;color:#38bdf8;white-space:nowrap}
+.pkg-price.normal{color:#e2e8f0}
+.pkg-features{display:flex;flex-direction:column;gap:5px}
+.pkg-feature{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b}
+.check{color:#10b981;font-size:13px}
+.btn-pkg{width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-pkg.primary{background:#0ea5e9;border:1px solid rgba(56,189,248,.3);color:#fff}
+.btn-pkg.secondary{background:transparent;border:1px solid #1e3a5f;color:#64748b}
+.btn-pkg:hover{opacity:.85}
+
+/* ─── SCREEN 7: PAYMENT ─── */
+#s7{padding:28px;gap:16px}
+.order-summary{width:100%;border-radius:18px;padding:16px;background:rgba(14,31,56,.8);border:1px solid #1e3a5f;display:flex;flex-direction:column;gap:12px}
+.order-id{font-size:11px;color:#475569;letter-spacing:.1em;text-transform:uppercase}
+.order-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e3a5f}
+.order-row:last-child{border-bottom:none}
+.order-label{font-size:13px;color:#64748b}
+.order-val{font-size:13px;font-weight:600;color:#e2e8f0;display:flex;align-items:center;gap:6px}
+.driver-chip{width:28px;height:28px;border-radius:8px;background:#0f3460;color:#38bdf8;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.order-total-row{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #1e3a5f}
+.total-label{font-size:14px;font-weight:700;color:#e2e8f0}
+.total-price{font-size:24px;font-weight:900;color:#38bdf8}
+.pay-method-label{font-size:11px;color:#475569;letter-spacing:.15em;text-transform:uppercase}
+.pay-methods{display:flex;gap:10px;margin-top:6px}
+.pay-method{flex:1;padding:12px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.pay-method.active{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:#38bdf8}
+.pay-method.inactive{background:rgba(14,31,56,.8);border:1px solid #1e3a5f;color:#475569}
+.secure-hint{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#334155}
+.btn-pay{width:100%;padding:20px;border-radius:18px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;color:#fff;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 0 30px rgba(14,165,233,.3)}
+
+/* ─── SCREEN 8: CONFIRMATION ─── */
+#s8{padding:28px;gap:18px;align-items:center}
+.conf-icon-wrap{width:112px;height:112px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,.2),rgba(16,185,129,.04) 70%);border:2px solid rgba(16,185,129,.5);display:flex;align-items:center;justify-content:center;font-size:56px;box-shadow:0 0 30px rgba(16,185,129,.2);margin-top:16px;animation:fadeIn .6s cubic-bezier(.34,1.56,.64,1)}
+.conf-title{font-size:26px;font-weight:900;color:#10b981;text-align:center}
+.conf-sub{font-size:13px;color:#64748b;text-align:center}
+.conf-card{width:100%;border-radius:18px;padding:16px;background:rgba(14,31,56,.8);border:1px solid #1e3a5f;display:flex;flex-direction:column;gap:12px}
+.conf-driver-row{display:flex;align-items:center;gap:14px}
+.conf-avatar{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#0f3460,#0a2040);border:1px solid #1e3a5f;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#38bdf8}
+.conf-driver-name{font-size:18px;font-weight:700;color:#e2e8f0}
+.conf-driver-status{display:flex;align-items:center;gap:4px;font-size:13px}
+.conf-driver-status span{color:#10b981}
+.eta-block{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15)}
+.eta-label{font-size:11px;color:#475569}
+.eta-value{font-size:20px;font-weight:700;color:#38bdf8;margin-top:2px}
+.eta-bike{font-size:32px;animation:breath 2s ease-in-out infinite}
+.conf-order-row{display:flex;justify-content:space-between;font-size:12px}
+.conf-order-label{color:#475569}
+.conf-order-val{font-family:monospace;color:#94a3b8}
+.conf-track{text-align:center;font-size:11px;color:#334155}
+.conf-thanks{font-size:13px;color:#64748b;text-align:center;line-height:1.6;max-width:320px}
+.btn-new{width:100%;padding:14px;border-radius:16px;background:transparent;border:1px solid #1e3a5f;color:#475569;font-size:14px;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:auto}
+.btn-new:hover{border-color:#38bdf8;color:#38bdf8}
+</style>
+</head>
+<body>
+
+<h1 class="demo-title">⚙ SafeRide Kiosk — UI Demo</h1>
+
+<div class="kiosk">
+
+  <!-- SCREEN 1: WELCOME -->
+  <div class="screen active" id="s1">
+    <div style="padding:28px;display:flex;flex-direction:column;justify-content:space-between;flex:1;gap:0">
+      <div class="s1-header">
+        <div class="sensor-badge">
+          <div class="sensor-dot"></div>
+          Senzor aktivan
+        </div>
+        <div class="s1-clock">
+          <div class="time" id="clock">--:--</div>
+          <div class="date" id="dateLbl"></div>
+        </div>
+      </div>
+
+      <div class="s1-logo">
+        <div class="logo-icon">🚗</div>
+        <div>
+          <div class="logo-title">SafeRide</div>
+          <div class="logo-sub">Kiosk System</div>
+        </div>
+        <div class="tagline">Vaša bezbednost je naš prioritet</div>
+      </div>
+
+      <div class="lang-section">
+        <div class="lang-hint">Odaberite jezik / Select language</div>
+        <div class="lang-btns">
+          <button class="lang-btn" onclick="goScreen(1)">
+            <span class="lang-flag">🇷🇸</span>
+            Srpski
+          </button>
+          <button class="lang-btn" onclick="goScreen(1)">
+            <span class="lang-flag">🇬🇧</span>
+            English
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: INSTRUCTION -->
+  <div class="screen" id="s2">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:18px;flex:1">
+      <div class="screen-header">
+        <button class="back-btn" onclick="goScreen(0)">←</button>
+        <div class="screen-title">Priprema za Test</div>
+      </div>
+      <div class="sensor-illus">
+        <div class="sensor-circle">🫧</div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-icon">👄</div>
+          <div><div class="step-title">1. Postavite usne</div><div class="step-desc">Pritisnite usne na otvor senzora</div></div>
+        </div>
+        <div class="step">
+          <div class="step-icon">🫁</div>
+          <div><div class="step-title">2. Dubok udah</div><div class="step-desc">Udahnite duboko pre puhanja</div></div>
+        </div>
+        <div class="step">
+          <div class="step-icon">💨</div>
+          <div><div class="step-title">3. Puhnite polako</div><div class="step-desc">Zadržite puhanje 3 sekunde</div></div>
+        </div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+        <button class="btn-primary" onclick="goScreen(2)">💨 Pokreni Test</button>
+        <div class="disclaimer">Test je namenjen proceni i nije zvanični alkotest</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: TESTING -->
+  <div class="screen" id="s3">
+    <div class="test-phase">Puhnite u senzor</div>
+    <div class="breath-container">
+      <div class="ring1"></div>
+      <div class="ring2"></div>
+      <div class="breath-core">💨</div>
+    </div>
+    <!-- countdown ring -->
+    <div class="countdown-ring">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="36" fill="none" stroke="#1e3a5f" stroke-width="4"/>
+        <circle cx="40" cy="40" r="36" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"
+          stroke-dasharray="226" stroke-dashoffset="75"
+          style="filter:drop-shadow(0 0 4px #38bdf8);transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div class="countdown-num">3</div>
+    </div>
+    <div class="test-hint">Merenje u toku, zadržite puhanje...</div>
+  </div>
+
+  <!-- SCREEN 4a: RESULT — SAFE -->
+  <div class="screen" id="s4a">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:14px;flex:1;align-items:center">
+      <div class="result-subtitle">
+        <h2>Vaša vrednost</h2>
+        <p>Zakonska granica: 0.2‰</p>
+      </div>
+      <div class="gauge-wrap">
+        <!-- SVG Gauge — SAFE (0.14‰) -->
+        <svg width="220" height="170" viewBox="0 0 220 220" style="overflow:visible">
+          <defs>
+            <filter id="glow-safe"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- track -->
+          <path d="M 27.8 165.5 A 88 88 0 1 1 192.2 165.5" fill="none" stroke="#1e3a5f" stroke-width="14" stroke-linecap="round"/>
+          <!-- safe zone -->
+          <path d="M 27.8 165.5 A 88 88 0 0 1 50.7 89.2" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <!-- caution zone -->
+          <path d="M 50.7 89.2 A 88 88 0 0 1 108 33" fill="none" stroke="#f59e0b" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <!-- danger zone -->
+          <path d="M 108 33 A 88 88 0 0 1 192.2 165.5" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <!-- value arc — safe at 0.14 -->
+          <path d="M 27.8 165.5 A 88 88 0 0 1 39.1 122.4" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #10b981)"/>
+          <!-- limit tick -->
+          <line x1="43" y1="86" x2="58" y2="94" stroke="#fff" stroke-width="2" opacity=".5"/>
+          <text x="56" y="77" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter,sans-serif">0.2‰</text>
+          <!-- needle -->
+          <line x1="110" y1="110" x2="45" y2="118" stroke="#10b981" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #10b981)"/>
+          <circle cx="110" cy="110" r="6" fill="#10b981"/>
+          <!-- center text -->
+          <text x="110" y="138" text-anchor="middle" fill="#10b981" font-size="32" font-weight="800" font-family="Inter,sans-serif" style="filter:drop-shadow(0 0 8px #10b98166)">0.14</text>
+          <text x="110" y="154" text-anchor="middle" fill="#475569" font-size="12" font-family="Inter,sans-serif">‰ promile</text>
+          <text x="32" y="178" text-anchor="middle" fill="#334155" font-size="10">0.0</text>
+          <text x="192" y="178" text-anchor="middle" fill="#334155" font-size="10">2.0</text>
+        </svg>
+      </div>
+      <div class="risk-card safe">
+        <div class="risk-icon-big">✅</div>
+        <div class="risk-title safe">BEZBEDNO ZA VOŽNJU</div>
+        <div class="risk-msg">Vaša vrednost alkohola je u okviru zakonske granice.</div>
+        <div class="risk-advice">Ipak vozite oprezno i prilagodite brzinu uslovima.</div>
+      </div>
+      <div class="result-actions" style="width:100%">
+        <button class="btn-secondary" onclick="goScreen(4)">🚲 Ipak želite vozača?</button>
+        <div class="btn-row">
+          <button class="btn-ghost" onclick="goScreen(1)">Novi test</button>
+          <button class="btn-ghost" onclick="goScreen(0)">Početak</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4b: RESULT — DANGER (0.65‰) -->
+  <div class="screen" id="s4b">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:14px;flex:1;align-items:center">
+      <div class="result-subtitle">
+        <h2>Vaša vrednost</h2>
+        <p>Zakonska granica: 0.2‰</p>
+      </div>
+      <div class="gauge-wrap">
+        <svg width="220" height="170" viewBox="0 0 220 220" style="overflow:visible">
+          <path d="M 27.8 165.5 A 88 88 0 1 1 192.2 165.5" fill="none" stroke="#1e3a5f" stroke-width="14" stroke-linecap="round"/>
+          <path d="M 27.8 165.5 A 88 88 0 0 1 50.7 89.2" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <path d="M 50.7 89.2 A 88 88 0 0 1 108 33" fill="none" stroke="#f59e0b" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <path d="M 108 33 A 88 88 0 0 1 192.2 165.5" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round" opacity=".5"/>
+          <!-- value arc — danger at 0.65 -->
+          <path d="M 27.8 165.5 A 88 88 0 0 1 145 44" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #ef4444)"/>
+          <line x1="43" y1="86" x2="58" y2="94" stroke="#fff" stroke-width="2" opacity=".5"/>
+          <text x="56" y="77" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter,sans-serif">0.2‰</text>
+          <!-- needle pointing to danger zone -->
+          <line x1="110" y1="110" x2="143" y2="50" stroke="#ef4444" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #ef4444)"/>
+          <circle cx="110" cy="110" r="6" fill="#ef4444"/>
+          <text x="110" y="138" text-anchor="middle" fill="#ef4444" font-size="32" font-weight="800" font-family="Inter,sans-serif" style="filter:drop-shadow(0 0 8px #ef444466)">0.65</text>
+          <text x="110" y="154" text-anchor="middle" fill="#475569" font-size="12" font-family="Inter,sans-serif">‰ promile</text>
+          <text x="32" y="178" text-anchor="middle" fill="#334155" font-size="10">0.0</text>
+          <text x="192" y="178" text-anchor="middle" fill="#334155" font-size="10">2.0</text>
+        </svg>
+      </div>
+      <div class="risk-card danger">
+        <div class="risk-icon-big">🚫</div>
+        <div class="risk-title danger">AKTIVIRAN SAFE DRIVER MODE</div>
+        <div class="risk-msg">Vaša vrednost alkohola prelazi zakonsku granicu. Nije bezbedno da vozite.</div>
+      </div>
+      <div class="result-actions" style="width:100%">
+        <button class="btn-book" onclick="goScreen(4)">🚲 Zakažite bezbednog vozača</button>
+        <div class="btn-row">
+          <button class="btn-ghost" onclick="goScreen(1)">Novi test</button>
+          <button class="btn-ghost" onclick="goScreen(0)">Početak</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: DRIVERS -->
+  <div class="screen" id="s5">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:16px;flex:1">
+      <div class="screen-header">
+        <button class="back-btn" onclick="goScreen(3)">←</button>
+        <div>
+          <div class="screen-title">Dostupni vozači</div>
+          <div style="font-size:11px;color:#475569">3 vozača dostupno</div>
+        </div>
+      </div>
+      <div class="driver-list">
+        <div class="driver-card">
+          <div class="driver-avatar">MN</div>
+          <div class="driver-info">
+            <div class="driver-name">Marko Nikolić</div>
+            <div class="driver-stars">
+              <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+              <span class="driver-rating">4.9</span>
+            </div>
+            <div class="driver-meta">🚲 0.8 km · 4 min</div>
+          </div>
+          <div class="driver-right">
+            <div class="eta-badge">4 min</div>
+            <button class="btn-select" onclick="goScreen(5)">Odaberi</button>
+          </div>
+        </div>
+        <div class="driver-card">
+          <div class="driver-avatar">SP</div>
+          <div class="driver-info">
+            <div class="driver-name">Stefan Petrović</div>
+            <div class="driver-stars">
+              <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star off">★</span>
+              <span class="driver-rating">4.7</span>
+            </div>
+            <div class="driver-meta">🚲 1.6 km · 9 min</div>
+          </div>
+          <div class="driver-right">
+            <div class="eta-badge">9 min</div>
+            <button class="btn-select" onclick="goScreen(5)">Odaberi</button>
+          </div>
+        </div>
+        <div class="driver-card">
+          <div class="driver-avatar">NJ</div>
+          <div class="driver-info">
+            <div class="driver-name">Nikola Jović</div>
+            <div class="driver-stars">
+              <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+              <span class="driver-rating">4.8</span>
+            </div>
+            <div class="driver-meta">🚲 2.3 km · 14 min</div>
+          </div>
+          <div class="driver-right">
+            <div class="eta-badge">14 min</div>
+            <button class="btn-select" onclick="goScreen(5)">Odaberi</button>
+          </div>
+        </div>
+      </div>
+      <div class="map-placeholder">📍 Live GPS tracking — integrisano u produkciji</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: PACKAGES -->
+  <div class="screen" id="s6">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:16px;flex:1">
+      <div class="screen-header">
+        <button class="back-btn" onclick="goScreen(4)">←</button>
+        <div class="screen-title">Odaberite paket</div>
+      </div>
+      <div class="pkg-list">
+        <div class="pkg-card">
+          <div class="pkg-header">
+            <div><div class="pkg-name">Standard</div><div class="pkg-desc">Osnovna vožnja do odredišta</div></div>
+            <div class="pkg-price normal">1.200 RSD</div>
+          </div>
+          <div class="pkg-features">
+            <div class="pkg-feature"><span class="check">✓</span> Vozač dolazi biciklom</div>
+            <div class="pkg-feature"><span class="check">✓</span> Vozi vaš automobil</div>
+            <div class="pkg-feature"><span class="check">✓</span> GPS praćenje vožnje</div>
+          </div>
+          <button class="btn-pkg secondary" onclick="goScreen(6)">Odaberi</button>
+        </div>
+        <div class="pkg-card highlighted">
+          <div class="rec-badge">Preporučeno</div>
+          <div class="pkg-header">
+            <div><div class="pkg-name">Safety Plus</div><div class="pkg-desc">Vožnja + Kasko osiguranje</div></div>
+            <div class="pkg-price">1.800 RSD</div>
+          </div>
+          <div class="pkg-features">
+            <div class="pkg-feature"><span class="check">✓</span> Sve iz Standard paketa</div>
+            <div class="pkg-feature"><span class="check">✓</span> Kasko osiguranje vozila</div>
+            <div class="pkg-feature"><span class="check">✓</span> Prioritetna korisnička podrška</div>
+          </div>
+          <button class="btn-pkg primary" onclick="goScreen(6)">Odaberi</button>
+        </div>
+        <div class="pkg-card">
+          <div class="pkg-header">
+            <div><div class="pkg-name">Priority</div><div class="pkg-desc">Najbrži dolazak + Premium</div></div>
+            <div class="pkg-price normal">2.500 RSD</div>
+          </div>
+          <div class="pkg-features">
+            <div class="pkg-feature"><span class="check">✓</span> Najbrži dostupni vozač</div>
+            <div class="pkg-feature"><span class="check">✓</span> Premium kasko osiguranje</div>
+            <div class="pkg-feature"><span class="check">✓</span> 24/7 VIP podrška</div>
+          </div>
+          <button class="btn-pkg secondary" onclick="goScreen(6)">Odaberi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 7: PAYMENT -->
+  <div class="screen" id="s7">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:16px;flex:1">
+      <div class="screen-header">
+        <button class="back-btn" onclick="goScreen(5)">←</button>
+        <div class="screen-title">Nalog za plaćanje</div>
+      </div>
+      <div class="order-summary">
+        <div class="order-id">Nalog br. SR-M6BXQ2-4F1</div>
+        <div class="order-row">
+          <div class="order-label">Vozač</div>
+          <div class="order-val"><div class="driver-chip">MN</div> Marko Nikolić</div>
+        </div>
+        <div class="order-row" style="border-bottom:none">
+          <div class="order-label">Paket</div>
+          <div class="order-val">Safety Plus</div>
+        </div>
+        <div class="order-total-row">
+          <div class="total-label">Ukupno</div>
+          <div class="total-price">1.800 RSD</div>
+        </div>
+      </div>
+      <div>
+        <div class="pay-method-label">Način plaćanja</div>
+        <div class="pay-methods">
+          <button class="pay-method active">💳 Kartica</button>
+          <button class="pay-method inactive">💵 Gotovina</button>
+        </div>
+      </div>
+      <div class="secure-hint">🔒 Sigurno plaćanje</div>
+      <div style="margin-top:auto">
+        <button class="btn-pay" onclick="goScreen(7)">Plati 1.800 RSD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 8: CONFIRMATION -->
+  <div class="screen" id="s8">
+    <div style="padding:28px;display:flex;flex-direction:column;gap:16px;flex:1;align-items:center">
+      <div class="conf-icon-wrap">✅</div>
+      <div>
+        <div class="conf-title">Potvrđeno!</div>
+        <div class="conf-sub">Vaš vozač je na putu</div>
+      </div>
+      <div class="conf-card" style="width:100%">
+        <div style="font-size:11px;color:#475569;letter-spacing:.1em;text-transform:uppercase">Vaš vozač</div>
+        <div class="conf-driver-row">
+          <div class="conf-avatar">MN</div>
+          <div>
+            <div class="conf-driver-name">Marko Nikolić</div>
+            <div class="conf-driver-status"><span>🚲</span> Na putu</div>
+          </div>
+        </div>
+        <div class="eta-block">
+          <div>
+            <div class="eta-label">Procenjeni dolazak za</div>
+            <div class="eta-value">4 minuta</div>
+          </div>
+          <div class="eta-bike">🚲</div>
+        </div>
+        <div class="conf-order-row">
+          <div class="conf-order-label">Nalog</div>
+          <div class="conf-order-val">SR-M6BXQ2-4F1</div>
+        </div>
+        <div class="conf-track">📍 Pratite vozača u realnom vremenu</div>
+      </div>
+      <div class="conf-thanks">Hvala na poverenju. Bezbedna vožnja!</div>
+      <button class="btn-new" onclick="goScreen(0)">Nova sesija</button>
+    </div>
+  </div>
+
+  <div class="kiosk-footer">
+    <span>SafeRide Kiosk v1.0</span>
+    <span>Safety Driver Engine</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav" id="navDots"></div>
+<div class="nav-arrows">
+  <button class="nav-btn" onclick="prevScreen()">← Prethodni</button>
+  <button class="nav-btn" onclick="nextScreen()">Sledeći →</button>
+</div>
+<div class="screen-label" id="screenLabel"></div>
+
+<script>
+const SCREENS = [
+  {id:'s1', label:'① Welcome — Izbor jezika'},
+  {id:'s2', label:'② Instrukcija — Priprema za test'},
+  {id:'s3', label:'③ Testiranje — Animacija senzora'},
+  {id:'s4a', label:'④a Rezultat — BEZBEDNO (0.14‰)'},
+  {id:'s4b', label:'④b Rezultat — OPASNO (0.65‰)'},
+  {id:'s5', label:'⑤ Vozači — Odabir vozača'},
+  {id:'s6', label:'⑥ Paketi — Standard / Safety Plus / Priority'},
+  {id:'s7', label:'⑦ Plaćanje — Nalog za naplatu'},
+  {id:'s8', label:'⑧ Potvrda — Booking potvrđen'},
+];
+let current = 0;
+
+function buildDots() {
+  const nav = document.getElementById('navDots');
+  nav.innerHTML = '';
+  SCREENS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'nav-dot' + (i === current ? ' active' : '');
+    d.onclick = () => goScreen(i);
+    nav.appendChild(d);
+  });
+}
+
+function goScreen(idx) {
+  document.getElementById(SCREENS[current].id).classList.remove('active');
+  current = Math.max(0, Math.min(idx, SCREENS.length - 1));
+  document.getElementById(SCREENS[current].id).classList.add('active');
+  document.getElementById('screenLabel').textContent = SCREENS[current].label;
+  buildDots();
+}
+
+function nextScreen() { goScreen(current + 1); }
+function prevScreen() { goScreen(current - 1); }
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('sr-RS', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('dateLbl').textContent =
+    now.toLocaleDateString('sr-RS', {day:'2-digit', month:'long', year:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextScreen();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevScreen();
+});
+
+buildDots();
+document.getElementById('screenLabel').textContent = SCREENS[0].label;
+</script>
+</body>
+</html>
